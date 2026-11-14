@@ -146,7 +146,17 @@ class WhisperTranscriber:
         try:
             # Check faster-whisper vs transformers pipeline
             if hasattr(self.model, "transcribe"):
-                segments, info = self.model.transcribe(str(audio_path), beam_size=5)
+                # Load audio as NumPy float32 array to bypass PyAV av.open(metadata_errors=...) incompatibility
+                try:
+                    import soundfile as sf
+                    audio_arr, sr = sf.read(str(audio_path), dtype="float32")
+                    if audio_arr.ndim > 1:
+                        audio_arr = audio_arr.mean(axis=1)
+                    audio_input = audio_arr
+                except Exception:
+                    audio_input = str(audio_path)
+
+                segments, info = self.model.transcribe(audio_input, beam_size=5)
                 result["detected_language"] = info.language
                 result["language_probability"] = round(info.language_probability, 3)
 
