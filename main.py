@@ -132,11 +132,14 @@ def run_phase_5(config_path: str = "configs/config.yaml"):
     print("=" * 60 + "\n")
 
 
-def run_phase_7(config_path: str = "configs/config.yaml"):
+def run_phase_7(config_path: str = "configs/config.yaml", pilot: bool = False, limit: int = None):
     """Phase 7: Visual Retrieval Indexing (SigLIP 2 & FAISS)."""
-    logger.info("Executing Phase 7: Building Visual Retrieval Index...")
+    effective_dry_run = pilot
+    effective_limit = 5 if pilot else limit
+    limit_str = f"limit={effective_limit}" if effective_limit else "all available training videos"
+    logger.info(f"Executing Phase 7: Building Visual Retrieval Index ({limit_str})...")
     from src.retrieval.build_index import build_index
-    build_index(limit=10, dry_run=True)
+    build_index(limit=effective_limit, dry_run=effective_dry_run)
     print("\n" + "=" * 60)
     print("PHASE 7 COMPLETE: VISUAL RETRIEVAL INDEX BUILT")
     print("Index directory: outputs/retrieval_index/")
@@ -220,7 +223,7 @@ def main():
         3: lambda: run_phase_3(args.config, limit=5 if args.pilot else args.limit),
         4: lambda: run_phase_4(args.config),
         5: lambda: run_phase_5(args.config),
-        7: lambda: run_phase_7(args.config),
+        7: lambda: run_phase_7(args.config, pilot=args.pilot, limit=args.limit),
         8: lambda: run_phase_8(args.config),
         10: lambda: run_phase_10(args.config),
     }
