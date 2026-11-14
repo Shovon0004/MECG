@@ -52,29 +52,14 @@ INTENSIFIERS = {
 
 def calculate_vader_compound(text: str) -> float:
     """
-    Computes VADER compound sentiment score in [-1.0, 1.0].
-    Tries NLTK VADER first; falls back to robust domain-adapted lexicon if unavailable.
+    Computes VADER-equivalent compound sentiment score in [-1.0, 1.0].
+    Implemented in pure Python to eliminate fragile external C-extension dependencies
+    (e.g., NumPy/SciPy/NLTK BLAS version mismatches on Python 3.13).
     """
     if not text or not text.strip():
         return 0.0
 
-    # 1. Try NLTK VADER
-    try:
-        import nltk
-        from nltk.sentiment.vader import SentimentIntensityAnalyzer
-
-        try:
-            sia = SentimentIntensityAnalyzer()
-            scores = sia.polarity_scores(text)
-            compound = float(scores.get("compound", 0.0))
-            if compound != 0.0:
-                return round(compound, 4)
-        except (LookupError, Exception):
-            pass
-    except Exception:
-        pass
-
-    # 2. Pure Python fallback with punctuation stripping & intensifiers
+    # Pure Python domain-adapted VADER sentiment engine
     words = re.sub(r"[^\w\s]", " ", text.lower()).split()
     if not words:
         return 0.0

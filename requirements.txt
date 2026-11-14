@@ -36,5 +36,4 @@ faiss-cpu>=1.7.4
 
 # Metrics & NLP Evaluation
 rouge-score>=0.1.2
-nltk>=3.8.0
 
