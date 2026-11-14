@@ -11,6 +11,7 @@ Evaluation metrics for MECG:
 """
 
 import math
+import re
 from typing import Any, Dict, List, Optional, Set, Union
 
 # Valence mappings for related negative complaint emotions
@@ -21,16 +22,21 @@ RELATED_EMOTION_GROUPS = [
     {"fear", "worry", "concern", "anxiety"},
 ]
 
-# Robust fallback negative lexicon if NLTK VADER is not downloaded
+# Robust fallback negative complaint lexicon
 FALLBACK_NEGATIVE_WORDS = {
-    "broken": -0.7, "defect": -0.8, "defective": -0.8, "damaged": -0.8,
-    "poor": -0.6, "bad": -0.6, "worst": -0.9, "terrible": -0.9,
+    "broken": -0.8, "defect": -0.8, "defective": -0.8, "damaged": -0.8,
+    "damage": -0.7, "poor": -0.6, "bad": -0.6, "worst": -0.9, "terrible": -0.9,
     "horrible": -0.9, "useless": -0.8, "fake": -0.8, "scratch": -0.5,
-    "scratched": -0.5, "fail": -0.7, "failed": -0.7, "failing": -0.7,
+    "scratched": -0.5, "scratches": -0.5, "fail": -0.7, "failed": -0.7, "failing": -0.7,
     "faulty": -0.8, "cheap": -0.5, "refund": -0.6, "return": -0.4,
-    "waste": -0.8, "issue": -0.5, "problem": -0.5, "disappointed": -0.8,
-    "disappointing": -0.8, "angry": -0.8, "frustrated": -0.8, "not working": -0.8,
-    "stopped working": -0.9, "low quality": -0.7, "slow": -0.4, "delay": -0.4,
+    "waste": -0.8, "issue": -0.5, "issues": -0.5, "problem": -0.5, "problems": -0.5,
+    "disappointed": -0.8, "disappointing": -0.8, "angry": -0.8, "frustrated": -0.8,
+    "frustrating": -0.8, "cracked": -0.8, "crack": -0.7, "cracks": -0.7,
+    "drains": -0.6, "drain": -0.5, "draining": -0.6, "dead": -0.8,
+    "slow": -0.4, "delay": -0.4, "torn": -0.7, "tear": -0.6, "leak": -0.7,
+    "leaking": -0.7, "burnt": -0.8, "burn": -0.7, "overheating": -0.7,
+    "overheat": -0.7, "shattered": -0.9, "unresponsive": -0.8, "awful": -0.9,
+    "not working": -0.8, "stopped working": -0.9, "low quality": -0.7,
 }
 
 FALLBACK_POSITIVE_WORDS = {
@@ -38,44 +44,57 @@ FALLBACK_POSITIVE_WORDS = {
     "perfect": 0.9, "amazing": 0.8, "works well": 0.7, "best": 0.8,
 }
 
+INTENSIFIERS = {
+    "extremely": 1.5, "very": 1.3, "really": 1.3, "so": 1.2,
+    "completely": 1.4, "totally": 1.4, "absolutely": 1.5, "highly": 1.3,
+}
+
 
 def calculate_vader_compound(text: str) -> float:
     """
     Computes VADER compound sentiment score in [-1.0, 1.0].
-    Tries NLTK VADER first; falls back to pure Python lexicon if unavailable.
+    Tries NLTK VADER first; falls back to robust domain-adapted lexicon if unavailable.
     """
     if not text or not text.strip():
         return 0.0
 
+    # 1. Try NLTK VADER
     try:
         import nltk
         from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
         try:
             sia = SentimentIntensityAnalyzer()
-        except LookupError:
-            nltk.download("vader_lexicon", quiet=True)
-            sia = SentimentIntensityAnalyzer()
-
-        scores = sia.polarity_scores(text)
-        return float(scores.get("compound", 0.0))
+            scores = sia.polarity_scores(text)
+            compound = float(scores.get("compound", 0.0))
+            if compound != 0.0:
+                return round(compound, 4)
+        except (LookupError, Exception):
+            pass
     except Exception:
-        # Pure Python fallback lexicon
-        words = text.lower().replace(".", " ").replace(",", " ").split()
-        if not words:
-            return 0.0
+        pass
 
-        score_sum = 0.0
-        for w in words:
-            if w in FALLBACK_NEGATIVE_WORDS:
-                score_sum += FALLBACK_NEGATIVE_WORDS[w]
-            elif w in FALLBACK_POSITIVE_WORDS:
-                score_sum += FALLBACK_POSITIVE_WORDS[w]
+    # 2. Pure Python fallback with punctuation stripping & intensifiers
+    words = re.sub(r"[^\w\s]", " ", text.lower()).split()
+    if not words:
+        return 0.0
 
-        # VADER-like normalization: x / sqrt(x^2 + alpha)
-        alpha = 15.0
-        compound = score_sum / math.sqrt((score_sum * score_sum) + alpha)
-        return round(float(compound), 4)
+    score_sum = 0.0
+    for i, w in enumerate(words):
+        if w in FALLBACK_NEGATIVE_WORDS:
+            val = FALLBACK_NEGATIVE_WORDS[w]
+            if i > 0 and words[i - 1] in INTENSIFIERS:
+                val *= INTENSIFIERS[words[i - 1]]
+            score_sum += val
+        elif w in FALLBACK_POSITIVE_WORDS:
+            val = FALLBACK_POSITIVE_WORDS[w]
+            if i > 0 and words[i - 1] in INTENSIFIERS:
+                val *= INTENSIFIERS[words[i - 1]]
+            score_sum += val
+
+    alpha = 15.0
+    compound = score_sum / math.sqrt((score_sum * score_sum) + alpha)
+    return round(float(compound), 4)
 
 
 def normalize_vader_sentiment(compound_score: float) -> float:
