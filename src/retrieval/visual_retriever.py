@@ -131,12 +131,24 @@ class VisualRetriever:
 
         with torch.no_grad():
             if hasattr(self.encoder, "get_image_features"):
-                features = self.encoder.get_image_features(**inputs)
+                feat_out = self.encoder.get_image_features(**inputs)
             else:
-                features = self.encoder(**inputs).pooler_output
+                feat_out = self.encoder(**inputs)
+
+            # Extract tensor from HuggingFace output container
+            if isinstance(feat_out, torch.Tensor):
+                tensor_feats = feat_out
+            elif hasattr(feat_out, "image_embeds") and feat_out.image_embeds is not None:
+                tensor_feats = feat_out.image_embeds
+            elif hasattr(feat_out, "pooler_output") and feat_out.pooler_output is not None:
+                tensor_feats = feat_out.pooler_output
+            elif hasattr(feat_out, "last_hidden_state") and feat_out.last_hidden_state is not None:
+                tensor_feats = feat_out.last_hidden_state.mean(dim=1)
+            else:
+                tensor_feats = feat_out[0] if isinstance(feat_out, (list, tuple)) else getattr(feat_out, "last_hidden_state", feat_out)
 
             # Average pool across frames
-            pooled = features.mean(dim=0, keepdim=True)
+            pooled = tensor_feats.mean(dim=0, keepdim=True)
             # L2 normalize
             norm_features = pooled / pooled.norm(dim=-1, keepdim=True)
             emb = norm_features.squeeze(0).cpu().tolist()
