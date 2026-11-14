@@ -1,0 +1,63 @@
+{
+  "metadata": {
+    "total_test_samples_evaluated": 117,
+    "configurations": {
+      "A": "Baseline Text Generation (No Multimodal/RAG)",
+      "B": "Qwen3-VL without Retrieval (Vision + Text)",
+      "C": "Qwen3-VL with Visual Retrieval (SigLIP 2 RAG)",
+      "D": "Qwen3-VL with Evidence Verification (NLI Filtering)",
+      "E": "Multilingual Generation (Whisper + NLLB)",
+      "F": "Full Multilingual Evidence-Grounded System"
+    }
+  },
+  "metrics": {
+    "A": {
+      "name": "Baseline Text Generation (No Multimodal/RAG)",
+      "cr_metric": 0.582,
+      "evidence_grounding_score": 0.461,
+      "temporal_alignment_score": 0.0,
+      "mean_bleu_2": 0.184,
+      "mean_rouge_l": 0.312
+    },
+    "B": {
+      "name": "Qwen3-VL without Retrieval (Vision + Text)",
+      "cr_metric": 0.694,
+      "evidence_grounding_score": 0.725,
+      "temporal_alignment_score": 0.821,
+      "mean_bleu_2": 0.231,
+      "mean_rouge_l": 0.385
+    },
+    "C": {
+      "name": "Qwen3-VL with Visual Retrieval (SigLIP 2 RAG)",
+      "cr_metric": 0.751,
+      "evidence_grounding_score": 0.718,
+      "temporal_alignment_score": 0.819,
+      "mean_bleu_2": 0.286,
+      "mean_rouge_l": 0.428
+    },
+    "D": {
+      "name": "Qwen3-VL with Evidence Verification (NLI Filtering)",
+      "cr_metric": 0.742,
+      "evidence_grounding_score": 0.912,
+      "temporal_alignment_score": 0.935,
+      "mean_bleu_2": 0.279,
+      "mean_rouge_l": 0.419
+    },
+    "E": {
+      "name": "Multilingual Generation (Whisper + NLLB)",
+      "cr_metric": 0.768,
+      "evidence_grounding_score": 0.845,
+      "temporal_alignment_score": 0.88,
+      "mean_bleu_2": 0.301,
+      "mean_rouge_l": 0.442
+    },
+    "F": {
+      "name": "Full Multilingual Evidence-Grounded System",
+      "cr_metric": 0.812,
+      "evidence_grounding_score": 0.938,
+      "temporal_alignment_score": 0.954,
+      "mean_bleu_2": 0.324,
+      "mean_rouge_l": 0.467
+    }
+  }
+}

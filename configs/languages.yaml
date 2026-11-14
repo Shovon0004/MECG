@@ -1,0 +1,84 @@
+# MECG Language Configuration and Code Mapping
+# Maps ISO-639-1 language codes, Whisper language tokens, and NLLB-200 BCP-47 identifiers
+
+languages:
+  en:
+    name: "English"
+    whisper_code: "en"
+    nllb_code: "eng_Latn"
+    script: "Latin"
+  bn:
+    name: "Bengali"
+    whisper_code: "bn"
+    nllb_code: "ben_Beng"
+    script: "Bengali"
+  hi:
+    name: "Hindi"
+    whisper_code: "hi"
+    nllb_code: "hin_Deva"
+    script: "Devanagari"
+  ta:
+    name: "Tamil"
+    whisper_code: "ta"
+    nllb_code: "tam_Taml"
+    script: "Tamil"
+  te:
+    name: "Telugu"
+    whisper_code: "te"
+    nllb_code: "tel_Telu"
+    script: "Telugu"
+  mr:
+    name: "Marathi"
+    whisper_code: "mr"
+    nllb_code: "mar_Deva"
+    script: "Devanagari"
+  gu:
+    name: "Gujarati"
+    whisper_code: "gu"
+    nllb_code: "guj_Gujr"
+    script: "Gujarati"
+  kn:
+    name: "Kannada"
+    whisper_code: "kn"
+    nllb_code: "kan_Knda"
+    script: "Kannada"
+  ml:
+    name: "Malayalam"
+    whisper_code: "ml"
+    nllb_code: "mal_Mlym"
+    script: "Malayalam"
+  ur:
+    name: "Urdu"
+    whisper_code: "ur"
+    nllb_code: "urd_Arab"
+    script: "Arabic"
+  es:
+    name: "Spanish"
+    whisper_code: "es"
+    nllb_code: "spa_Latn"
+    script: "Latin"
+  fr:
+    name: "French"
+    whisper_code: "fr"
+    nllb_code: "fra_Latn"
+    script: "Latin"
+  de:
+    name: "German"
+    whisper_code: "de"
+    nllb_code: "deu_Latn"
+    script: "Latin"
+
+default_source_lang: "en"
+default_target_lang: "en"
+default_nllb_target: "eng_Latn"
+
+# Verified evaluation phrase pairs for translation sanity checking
+evaluation_pairs:
+  - source_lang: "bn"
+    target_lang: "en"
+    source_text: "প্লাস্টিকের বোতল থেকে তীব্র রাসায়নিক গন্ধ বের হচ্ছে।"
+    reference_text: "A strong chemical smell is coming from the plastic bottle."
+  - source_lang: "hi"
+    target_lang: "en"
+    source_text: "स्क्रीन काम नहीं कर रही है और बार-बार झिलमिला रही है।"
+    reference_text: "The screen is not working and flickering repeatedly."

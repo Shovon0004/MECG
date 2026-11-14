@@ -1,0 +1,44 @@
+{
+  "video_id": "TEST_001",
+  "video_path": "/tmp/tmpgsq52h0e/test_pipeline_vid.mp4",
+  "total_frames_extracted": 7,
+  "target_frames": 8,
+  "duration_seconds": 1.0,
+  "frames": [
+    {
+      "index": 0,
+      "timestamp": 0.062,
+      "file_path": "/home/shovon/MECG/data/processed/frames/test_pipeline_vid/frame_000_0.06s.jpg"
+    },
+    {
+      "index": 1,
+      "timestamp": 0.188,
+      "file_path": "/home/shovon/MECG/data/processed/frames/test_pipeline_vid/frame_001_0.19s.jpg"
+    },
+    {
+      "index": 2,
+      "timestamp": 0.312,
+      "file_path": "/home/shovon/MECG/data/processed/frames/test_pipeline_vid/frame_002_0.31s.jpg"
+    },
+    {
+      "index": 3,
+      "timestamp": 0.438,
+      "file_path": "/home/shovon/MECG/data/processed/frames/test_pipeline_vid/frame_003_0.44s.jpg"
+    },
+    {
+      "index": 4,
+      "timestamp": 0.562,
+      "file_path": "/home/shovon/MECG/data/processed/frames/test_pipeline_vid/frame_004_0.56s.jpg"
+    },
+    {
+      "index": 5,
+      "timestamp": 0.688,
+      "file_path": "/home/shovon/MECG/data/processed/frames/test_pipeline_vid/frame_005_0.69s.jpg"
+    },
+    {
+      "index": 6,
+      "timestamp": 0.812,
+      "file_path": "/home/shovon/MECG/data/processed/frames/test_pipeline_vid/frame_006_0.81s.jpg"
+    }
+  ]
+}

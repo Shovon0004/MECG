@@ -1,0 +1,112 @@
+# MECG: Multilingual Evidence-Grounded Complaint Generation
+# Global Configuration File
+
+project:
+  name: "MECG"
+  description: "Multilingual Evidence-Grounded Video Complaint Analysis and Generation System"
+  version: "1.0.0"
+  random_seed: 42
+
+paths:
+  # Environment autodetection handles Kaggle vs Local paths
+  kaggle_input_dir: "/kaggle/input/comvid-dataset"
+  kaggle_working_dir: "/kaggle/working"
+  
+  local_data_dir: "data"
+  raw_csv: "data/Com-VID_data.csv"
+  processed_dir: "data/processed"
+  cleaned_csv: "data/processed/ComVID_cleaned.csv"
+  transcripts_file: "data/processed/transcripts.jsonl"
+  
+  video_dir: "data/videos"
+  frames_dir: "data/processed/frames"
+  audio_dir: "data/processed/audio"
+  
+  reports_dir: "reports"
+  dataset_audit_report: "reports/dataset_audit.json"
+  download_report: "reports/video_download_report.json"
+  
+  outputs_dir: "outputs"
+  checkpoints_dir: "outputs/checkpoints"
+  retrieval_index_dir: "outputs/retrieval_index"
+
+splits:
+  train_ratio: 0.80
+  val_ratio: 0.10
+  test_ratio: 0.10
+  group_by_column: "video_url_hash"  # Group-aware splitting strictly prevents video leakage
+  random_seed: 42
+
+video_processing:
+  pilot_mode: true
+  pilot_size: 5
+  sample_frames: 8                   # Configurable initial sample: 8 frames
+  frame_size: [448, 448]
+  download_timeout_seconds: 60
+  max_download_retries: 3
+  supported_protocols: ["http", "https"]
+  hls_transcode_quality: "best"      # FFmpeg transcode setting for M3U8 HLS streams
+  extract_audio_format: "wav"
+  audio_sample_rate: 16000           # 16 kHz required for Whisper models
+  audio_channels: 1
+
+audio_transcription:
+  model_id: "openai/whisper-large-v3-turbo"
+  fallback_model_id: "openai/whisper-small"
+  device: "cuda"                     # Automatically falls back to cpu if cuda unavailable
+  compute_type: "float16"            # Use int8 on CPU
+  language_detection: true
+  temperature: 0.0
+  beam_size: 5
+
+multilingual_translation:
+  model_id: "facebook/nllb-200-distilled-600M"
+  default_target_lang: "eng_Latn"
+  batch_size: 16
+  max_length: 512
+  cache_enabled: true
+
+vision_analysis:
+  model_id: "Qwen/Qwen3-VL-4B-Instruct"
+  quantization_4bit: true
+  bnb_4bit_compute_dtype: "bfloat16"
+  max_new_tokens: 512
+  temperature: 0.2
+  image_resolution: 448
+
+classification:
+  aspect_model_id: "microsoft/deberta-v3-base"
+  emotion_model_id: "xlm-roberta-base"
+  batch_size: 16
+  learning_rate: 2.0e-5
+  max_length: 256
+  epochs: 5
+  warmup_ratio: 0.1
+  weight_decay: 0.01
+
+retrieval:
+  vision_encoder_id: "google/siglip-base-patch16-224"
+  vector_dimension: 768
+  top_k: 3
+  index_type: "IndexFlatIP"          # Cosine similarity with normalized embeddings
+  prevent_self_retrieval: true
+
+generation:
+  model_id: "Qwen/Qwen3-VL-4B-Instruct"
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  target_modules: ["q_proj", "v_proj", "k_proj", "o_proj"]
+  batch_size: 1
+  gradient_accumulation_steps: 8
+  learning_rate: 1.0e-4
+  max_seq_length: 1024
+  num_train_epochs: 3
+  fp16: false
+  bf16: true
+
+verification:
+  nli_model_id: "cross-encoder/nli-deberta-v3-base"
+  entailment_threshold: 0.70
+  contradiction_threshold: 0.60
+  strict_evidence_matching: true

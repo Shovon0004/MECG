@@ -1,0 +1,256 @@
+{
+  "metadata": {
+    "audit_timestamp": "2026-11-14T07:55:55.204897+00:00",
+    "dataset_name": "Com-VID",
+    "total_records": 1175,
+    "dataset_rules_enforced": [
+      "Preserve all original raw columns and values",
+      "Flag duplicate IDs and video URLs without deleting",
+      "Normalize known typos and punctuation without merging distinct aspect concepts",
+      "Group-aware split to strictly enforce 0% video leakage across splits",
+      "Distinguish customer text from future audio transcripts",
+      "Acknowledge that ground-truth complaint may mention non-visual defects"
+    ]
+  },
+  "identifiers_and_duplicates": {
+    "unique_review_ids": 1164,
+    "duplicate_review_ids_count": 11,
+    "sample_duplicate_ids": {
+      "R3UZNJKRHYI09V": 2,
+      "R12ZN5OFE1SZFF": 2,
+      "R3NY042Q3WHRVF": 2,
+      "RFNFVN6345EZW": 2,
+      "R2W60PZSPQNZQN": 2
+    },
+    "unique_video_urls": 1086,
+    "duplicate_video_urls_count": 86,
+    "records_with_missing_video_url": 3,
+    "missing_url_review_ids": [
+      "R2TD0TOL058O0B",
+      "RZNHON2W0MNUX",
+      "T25142"
+    ]
+  },
+  "missing_values": {
+    "normalized_aspects": 16,
+    "raw_aspect": 15,
+    "raw_video_source": 3
+  },
+  "distributions": {
+    "domains": {
+      "Household Item": {
+        "count": 202,
+        "percentage": 17.19
+      },
+      "Fashion": {
+        "count": 273,
+        "percentage": 23.23
+      },
+      "Electronic Gadgets": {
+        "count": 655,
+        "percentage": 55.74
+      },
+      "Others": {
+        "count": 45,
+        "percentage": 3.83
+      }
+    },
+    "emotions": {
+      "blame": {
+        "count": 305,
+        "percentage": 25.96
+      },
+      "dissatisfaction": {
+        "count": 339,
+        "percentage": 28.85
+      },
+      "frustration": {
+        "count": 189,
+        "percentage": 16.09
+      },
+      "disappointment": {
+        "count": 342,
+        "percentage": 29.11
+      }
+    },
+    "ratings": {
+      "2.0": {
+        "count": 204,
+        "percentage": 17.36
+      },
+      "1.0": {
+        "count": 970,
+        "percentage": 82.55
+      },
+      "3.0": {
+        "count": 1,
+        "percentage": 0.09
+      }
+    },
+    "aspects": {
+      "total_unique_normalized_aspects": 56,
+      "top_aspects": [
+        {
+          "aspect": "Quality",
+          "count": 810,
+          "percentage": 68.94
+        },
+        {
+          "aspect": "Usability",
+          "count": 751,
+          "percentage": 63.91
+        },
+        {
+          "aspect": "Damaged Quality",
+          "count": 74,
+          "percentage": 6.3
+        },
+        {
+          "aspect": "Originality",
+          "count": 72,
+          "percentage": 6.13
+        },
+        {
+          "aspect": "Functionality",
+          "count": 60,
+          "percentage": 5.11
+        },
+        {
+          "aspect": "Manufacturing",
+          "count": 59,
+          "percentage": 5.02
+        },
+        {
+          "aspect": "Size",
+          "count": 50,
+          "percentage": 4.26
+        },
+        {
+          "aspect": "Defective",
+          "count": 50,
+          "percentage": 4.26
+        },
+        {
+          "aspect": "Correctness",
+          "count": 46,
+          "percentage": 3.91
+        },
+        {
+          "aspect": "Poor Quality",
+          "count": 46,
+          "percentage": 3.91
+        },
+        {
+          "aspect": "Durability",
+          "count": 35,
+          "percentage": 2.98
+        },
+        {
+          "aspect": "Design",
+          "count": 34,
+          "percentage": 2.89
+        },
+        {
+          "aspect": "Colour",
+          "count": 29,
+          "percentage": 2.47
+        },
+        {
+          "aspect": "Comfortness",
+          "count": 23,
+          "percentage": 1.96
+        },
+        {
+          "aspect": "Performance",
+          "count": 23,
+          "percentage": 1.96
+        },
+        {
+          "aspect": "Representation",
+          "count": 22,
+          "percentage": 1.87
+        },
+        {
+          "aspect": "Completeness",
+          "count": 20,
+          "percentage": 1.7
+        },
+        {
+          "aspect": "Finishing",
+          "count": 16,
+          "percentage": 1.36
+        },
+        {
+          "aspect": "Fraud",
+          "count": 15,
+          "percentage": 1.28
+        },
+        {
+          "aspect": "Packaging",
+          "count": 14,
+          "percentage": 1.19
+        }
+      ],
+      "aspect_count_per_review_distribution": {
+        "0_aspects": 16,
+        "1_aspects": 216,
+        "2_aspects": 707,
+        "3_aspects": 225,
+        "4_aspects": 11
+      }
+    }
+  },
+  "splits": {
+    "records_per_split": {
+      "train": {
+        "count": 940,
+        "percentage": 80.0
+      },
+      "test": {
+        "count": 117,
+        "percentage": 9.96
+      },
+      "val": {
+        "count": 118,
+        "percentage": 10.04
+      }
+    },
+    "unique_video_groups_per_split": {
+      "train": 871,
+      "test": 110,
+      "val": 108
+    },
+    "video_leakage_check": {
+      "train_val_overlap_count": 0,
+      "train_test_overlap_count": 0,
+      "val_test_overlap_count": 0,
+      "is_leakage_free": true
+    }
+  },
+  "text_statistics": {
+    "customer_text_characters": {
+      "min": 2,
+      "max": 1374,
+      "mean": 147.75,
+      "median": 89.0
+    },
+    "customer_text_words": {
+      "min": 1,
+      "max": 237,
+      "mean": 25.1,
+      "median": 16.0
+    },
+    "ground_truth_characters": {
+      "min": 49,
+      "max": 1081,
+      "mean": 176.26,
+      "median": 161.0
+    },
+    "ground_truth_words": {
+      "min": 10,
+      "max": 190,
+      "mean": 31.98,
+      "median": 29.0
+    }
+  }
+}
