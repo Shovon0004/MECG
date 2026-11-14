@@ -1,7 +1,7 @@
 """
-Interactive demonstration script:
-Runs the full MECG pipeline on a real downloaded video from data/videos/
-and displays the complete multimodal evidence-grounded complaint description.
+Batch & single video demonstration and evaluation script:
+Runs the full MECG multimodal pipeline on downloaded videos in data/videos/,
+computes Grounding & Composite CR metrics, and displays structured reports.
 """
 
 import argparse
@@ -9,6 +9,7 @@ import csv
 import json
 import logging
 from pathlib import Path
+from typing import Any, Dict, List
 
 from src.pipeline import MECGPipeline
 from evaluation.metrics import calculate_composite_cr
@@ -17,46 +18,42 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger("MECG.Demo")
 
 
-def run_demo(video_path: str = None, review_id: str = None):
-    # 1. Locate video file
-    video_dir = Path("data/videos")
-    available_videos = sorted(list(video_dir.glob("*.mp4")))
-
-    if not available_videos and not video_path:
-        print("\n[!] No video found in data/videos/. Please download pilot videos first using:")
-        print("    !python main.py --phase 2 --pilot\n")
-        return
-
-    target_video = Path(video_path) if video_path else available_videos[0]
-    video_hash = target_video.stem
-
-    # 2. Look up metadata from ComVID_cleaned.csv
-    csv_path = Path("data/processed/ComVID_cleaned.csv")
-    row_info = {}
-    if csv_path.exists():
-        with open(csv_path, "r", encoding="utf-8") as f:
+def load_dataset_metadata(csv_path: str = "data/processed/ComVID_cleaned.csv") -> Dict[str, Dict[str, Any]]:
+    """Loads metadata index keyed by video_url_hash."""
+    meta_by_hash = {}
+    p = Path(csv_path)
+    if p.exists():
+        with open(p, "r", encoding="utf-8") as f:
             for row in csv.DictReader(f):
-                if row.get("video_url_hash") == video_hash or row.get("review_id") == review_id:
-                    row_info = row
-                    break
+                h = row.get("video_url_hash")
+                if h and h not in meta_by_hash:
+                    meta_by_hash[h] = row
+    return meta_by_hash
+
+
+def process_single_video(
+    pipeline: MECGPipeline,
+    target_video: Path,
+    metadata_lookup: Dict[str, Dict[str, Any]],
+    verbose: bool = True,
+) -> Dict[str, Any]:
+    """Runs pipeline on a single video file and calculates metrics."""
+    video_hash = target_video.stem
+    row_info = metadata_lookup.get(video_hash, {})
 
     customer_text = row_info.get("customer_text") or "Not recommended. Product is defective."
-    domain = row_info.get("domain") or "Household Item"
+    domain = row_info.get("domain") or "General"
     gt_aspects = [a.strip() for a in row_info.get("aspects", "").split(",") if a.strip()]
     gt_emotion = row_info.get("emotion") or "dissatisfaction"
     gt_complaint = row_info.get("ground_truth_complaint") or ""
 
-    print("\n" + "=" * 80)
-    print("MECG MULTIMODAL EVIDENCE-GROUNDED COMPLAINT GENERATION DEMO")
-    print("=" * 80)
-    print(f"Video File        : {target_video.name}")
-    print(f"Product Domain    : {domain}")
-    print(f"Customer Input    : \"{customer_text}\"")
-    print(f"Gold Ground Truth : \"{gt_complaint}\"")
-    print("=" * 80)
-    print("\n[>>] Initializing MECG Pipeline & running multimodal inference...\n")
+    if verbose:
+        print("\n" + "=" * 80)
+        print(f"PROCESSING VIDEO: {target_video.name}")
+        print(f"Domain         : {domain}")
+        print(f"Customer Input : \"{customer_text}\"")
+        print("=" * 80)
 
-    pipeline = MECGPipeline()
     result = pipeline.process(
         video_path=target_video,
         customer_text=customer_text,
@@ -65,7 +62,6 @@ def run_demo(video_path: str = None, review_id: str = None):
         requested_output_language="en",
     )
 
-    # 3. Compute Composite CR Score
     generated_text = result.get("generated_complaint", "")
     pred_aspects = result.get("aspects", [])
     pred_emotion = result.get("emotion", "dissatisfaction")
@@ -78,45 +74,127 @@ def run_demo(video_path: str = None, review_id: str = None):
         predicted_emotion=pred_emotion,
     )
 
-    print("\n" + "=" * 80)
-    print("EVIDENCE EXTRACTION & MULTIMODAL PERCEPTION RESULTS")
-    print("=" * 80)
-    print(f"1. Spoken Audio Transcript : \"{result.get('transcript_original', '(No speech detected)')}\"")
-    print(f"2. Detected Language       : {result.get('detected_language', 'en')}")
-    print(f"3. Predicted Aspects       : {result.get('aspects', [])}")
-    print(f"4. Predicted Emotion       : {result.get('emotion', 'dissatisfaction')}")
-    
-    print("\n5. Visual Observations (Frames):")
-    for obs in result.get("visual_evidence", []):
-        ts = obs.get("timestamp_seconds", "0.0")
-        desc = obs.get("observation", obs.get("description", ""))
-        print(f"   - [t={ts}s] {desc}")
+    record = {
+        "video_file": target_video.name,
+        "video_hash": video_hash,
+        "domain": domain,
+        "customer_input": customer_text,
+        "gold_ground_truth": gt_complaint,
+        "generated_complaint": generated_text,
+        "transcript": result.get("transcript_original", ""),
+        "detected_language": result.get("detected_language", "en"),
+        "predicted_aspects": pred_aspects,
+        "gold_aspects": gt_aspects,
+        "aspect_recall": cr_metrics["aspect_score"],
+        "predicted_emotion": pred_emotion,
+        "gold_emotion": gt_emotion,
+        "emotion_score": cr_metrics["emotion_score"],
+        "sentiment_score": cr_metrics["s_vader_norm"],
+        "composite_cr": cr_metrics["cr_score"],
+        "grounding_score": result.get("evidence_grounding_score", 0.0),
+        "verified_claims_count": len(result.get("verified_claims", [])),
+        "unsupported_claims_count": len(result.get("unsupported_claims", [])),
+    }
 
-    print("\n" + "=" * 80)
-    print("FINAL GENERATED EVIDENCE-GROUNDED COMPLAINT DESCRIPTION")
-    print("=" * 80)
-    print(f"\n\"{generated_text}\"\n")
-    print("-" * 80)
+    if verbose:
+        print("\n--- GENERATED COMPLAINT ---")
+        print(f"\"{generated_text}\"\n")
+        print(f"CR Score: {cr_metrics['cr_score']:.4f} | Grounding: {result.get('evidence_grounding_score', 0.0)*100:.1f}% | Aspects: {pred_aspects}")
+        print("=" * 80)
 
-    print("VERIFICATION & GROUNDING AUDIT:")
-    print(f"- Evidence Grounding Score : {result.get('evidence_grounding_score', 1.0) * 100:.1f}%")
-    print(f"- Verified Claims Count   : {len(result.get('verified_claims', []))}")
-    print(f"- Unsupported Claims      : {len(result.get('unsupported_claims', []))}")
-    for uc in result.get("unsupported_claims", []):
-        print(f"  [X] Filtered: {uc.get('claim')}")
+    return record
 
-    print("\nCOMPOSITE COMPLAINT RETENTION (CR) BREAKDOWN:")
-    print(f"- Composite CR Score      : {cr_metrics['cr_score']:.4f}")
-    print(f"  * Normalized Sentiment  : {cr_metrics['s_vader_norm']:.4f}")
-    print(f"  * Emotion Alignment     : {cr_metrics['emotion_score']:.4f}")
-    print(f"  * Aspect Recall         : {cr_metrics['aspect_score']:.4f}")
-    print("=" * 80 + "\n")
+
+def print_summary_table(records: List[Dict[str, Any]]):
+    """Prints ASCII table comparing all evaluated videos."""
+    print("\n" + "=" * 96)
+    print("MECG MULTIMODAL COMPLAINT GENERATION BATCH EVALUATION SUMMARY")
+    print("=" * 96)
+    print(f"{'Video File':<22} | {'Domain':<16} | {'Aspects (AS)':<12} | {'Emotion (ES)':<12} | {'S_VADER':<8} | {'CR Score':<8} | {'Grounding':<9}")
+    print("-" * 96)
+
+    total_as, total_es, total_sv, total_cr, total_gr = 0.0, 0.0, 0.0, 0.0, 0.0
+    for r in records:
+        print(
+            f"{r['video_file']:<22} | "
+            f"{r['domain'][:16]:<16} | "
+            f"{r['aspect_recall']:<12.3f} | "
+            f"{r['emotion_score']:<12.3f} | "
+            f"{r['sentiment_score']:<8.3f} | "
+            f"{r['composite_cr']:<8.3f} | "
+            f"{r['grounding_score']*100:<8.1f}%"
+        )
+        total_as += r["aspect_recall"]
+        total_es += r["emotion_score"]
+        total_sv += r["sentiment_score"]
+        total_cr += r["composite_cr"]
+        total_gr += r["grounding_score"]
+
+    n = max(1, len(records))
+    print("-" * 96)
+    print(
+        f"{'AVERAGE (' + str(n) + ' videos)':<22} | "
+        f"{'ALL DOMAINS':<16} | "
+        f"{total_as/n:<12.3f} | "
+        f"{total_es/n:<12.3f} | "
+        f"{total_sv/n:<8.3f} | "
+        f"{total_cr/n:<8.3f} | "
+        f"{(total_gr/n)*100:<8.1f}%"
+    )
+    print("=" * 96 + "\n")
+
+
+def run_batch_evaluation(video_path: str = None, run_all: bool = False, limit: int = None):
+    video_dir = Path("data/videos")
+    available_videos = sorted(list(video_dir.glob("*.mp4")))
+
+    if not available_videos and not video_path:
+        print("\n[!] No video found in data/videos/. Please download videos first using:")
+        print("    !python main.py --phase 2 --limit 20  (or without limit for all)\n")
+        return
+
+    metadata_lookup = load_dataset_metadata()
+
+    # Determine videos to process
+    if video_path:
+        targets = [Path(video_path)]
+    elif run_all or limit:
+        targets = available_videos[:limit] if limit else available_videos
+    else:
+        targets = [available_videos[0]]
+
+    print(f"\n[>>] Initializing unified MECGPipeline for {len(targets)} video(s)...")
+    pipeline = MECGPipeline()
+    print("[>>] Pipeline ready. Commencing batch inference...\n")
+
+    results = []
+    for idx, vid in enumerate(targets, 1):
+        print(f"\n>>> [{idx}/{len(targets)}] Evaluating {vid.name}...")
+        rec = process_single_video(
+            pipeline=pipeline,
+            target_video=vid,
+            metadata_lookup=metadata_lookup,
+            verbose=(len(targets) <= 5),
+        )
+        results.append(rec)
+
+    # Print summary table if more than 1 video
+    if len(results) >= 1:
+        print_summary_table(results)
+
+    # Save output report
+    output_path = Path("reports/all_videos_evaluation.json")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(results, f, indent=2, ensure_ascii=False)
+    print(f"Detailed batch results saved to: {output_path}")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="MECG Video Description Demo")
-    parser.add_argument("--video_path", type=str, default=None, help="Path to mp4 video")
-    parser.add_argument("--review_id", type=str, default=None, help="ComVID review ID")
+    parser = argparse.ArgumentParser(description="MECG Batch Video Description & Evaluation")
+    parser.add_argument("--video_path", type=str, default=None, help="Path to single mp4 video")
+    parser.add_argument("--all", action="store_true", help="Process ALL videos in data/videos/")
+    parser.add_argument("--limit", type=int, default=None, help="Limit number of videos to evaluate")
     args = parser.parse_args()
 
-    run_demo(video_path=args.video_path, review_id=args.review_id)
+    run_batch_evaluation(video_path=args.video_path, run_all=args.all, limit=args.limit)

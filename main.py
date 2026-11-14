@@ -199,6 +199,12 @@ def main():
         action="store_true",
         help="Run in pilot mode (processes 5 samples only)",
     )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Maximum number of samples/videos to process",
+    )
 
     args = parser.parse_args()
 
@@ -208,8 +214,8 @@ def main():
 
     phase_actions = {
         1: lambda: run_phase_1(args.config),
-        2: lambda: run_phase_2(args.config, pilot=args.pilot),
-        3: lambda: run_phase_3(args.config, limit=5 if args.pilot else 10),
+        2: lambda: run_phase_2(args.config, pilot=args.pilot, limit=args.limit),
+        3: lambda: run_phase_3(args.config, limit=5 if args.pilot else (args.limit or 10)),
         4: lambda: run_phase_4(args.config),
         5: lambda: run_phase_5(args.config),
         7: lambda: run_phase_7(args.config),
