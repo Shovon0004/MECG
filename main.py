@@ -158,6 +158,24 @@ def run_phase_8(config_path: str = "configs/config.yaml"):
     print("=" * 60 + "\n")
 
 
+def run_phase_9(config_path: str = "configs/config.yaml", pilot: bool = False, limit: int = None):
+    """Phase 9: Multimodal Complaint Generation & Verification Demonstration."""
+    logger.info("Executing Phase 9: End-to-End Multimodal Generation & Verification...")
+    from demo_video_description import run_batch_evaluation
+    if pilot:
+        run_batch_evaluation(run_all=False, limit=5)
+    elif limit is not None and limit > 0:
+        run_batch_evaluation(run_all=False, limit=limit)
+    elif limit == -1 or limit == 0:
+        run_batch_evaluation(run_all=True, limit=None)
+    else:
+        # Default single-video demonstration
+        run_batch_evaluation(run_all=False, limit=1)
+    print("\n" + "=" * 60)
+    print("PHASE 9 COMPLETE: END-TO-END MULTIMODAL COMPLAINT GENERATION")
+    print("=" * 60 + "\n")
+
+
 def run_phase_10(config_path: str = "configs/config.yaml"):
     """Phase 10: Full Evaluation & Ablation Study."""
     logger.info("Executing Phase 10: Evaluation & Ablation Study...")
@@ -225,6 +243,7 @@ def main():
         5: lambda: run_phase_5(args.config),
         7: lambda: run_phase_7(args.config, pilot=args.pilot, limit=args.limit),
         8: lambda: run_phase_8(args.config),
+        9: lambda: run_phase_9(args.config, pilot=args.pilot, limit=args.limit),
         10: lambda: run_phase_10(args.config),
     }
 
