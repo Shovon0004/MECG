@@ -7,9 +7,13 @@ import argparse
 import csv
 import json
 import logging
+import sys
 from collections import Counter
 from pathlib import Path
 from typing import Dict, List, Tuple
+
+# Add project root to sys.path
+sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
 
 import torch
 from torch.utils.data import DataLoader, Dataset
