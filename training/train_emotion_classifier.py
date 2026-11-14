@@ -145,7 +145,7 @@ def train(
     class_weights = torch.tensor(weights, dtype=torch.float).to(device)
 
     criterion = torch.nn.CrossEntropyLoss(weight=class_weights)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, eps=1e-6, weight_decay=0.01)
     total_steps = len(train_loader) * epochs
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=int(total_steps * 0.1), num_training_steps=total_steps)
 
@@ -162,7 +162,10 @@ def train(
 
             logits = model(input_ids=ids, attention_mask=mask).logits
             loss = criterion(logits, labels)
+            if torch.isnan(loss):
+                continue
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
             scheduler.step()
             train_loss += loss.item()
