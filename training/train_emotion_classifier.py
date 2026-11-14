@@ -138,13 +138,7 @@ def train(
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False)
 
-    # Class weights for CrossEntropyLoss to address label imbalance
-    label_counts = Counter(train_labels)
-    total_samples = len(train_labels)
-    weights = [total_samples / (len(classifier.emotions) * max(label_counts[i], 1)) for i in range(len(classifier.emotions))]
-    class_weights = torch.tensor(weights, dtype=torch.float).to(device)
-
-    criterion = torch.nn.CrossEntropyLoss(weight=class_weights)
+    criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, eps=1e-6, weight_decay=0.01)
     total_steps = len(train_loader) * epochs
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=int(total_steps * 0.1), num_training_steps=total_steps)
