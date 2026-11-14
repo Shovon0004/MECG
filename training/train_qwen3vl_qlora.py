@@ -17,8 +17,8 @@ if not logger.handlers:
 def train_qlora(
     train_jsonl: str = "data/processed/generation_train.jsonl",
     val_jsonl: str = "data/processed/generation_val.jsonl",
-    output_dir: str = "outputs/checkpoints/qwen3vl_complaint_lora",
-    base_model_id: str = "Qwen/Qwen3-VL-4B-Instruct",
+    output_dir: str = "outputs/checkpoints/qwen_complaint_lora",
+    base_model_id: str = "Qwen/Qwen2.5-VL-7B-Instruct",
     epochs: int = 3,
     lr: float = 1e-4,
     lora_r: int = 16,
@@ -40,12 +40,15 @@ def train_qlora(
             Trainer,
         )
         try:
-            from transformers import AutoModelForImageTextToText as VisionModelClass
+            from transformers import Qwen2_5_VLForConditionalGeneration as VisionModelClass
         except ImportError:
             try:
-                from transformers import AutoModelForVision2Seq as VisionModelClass
+                from transformers import AutoModelForImageTextToText as VisionModelClass
             except ImportError:
-                from transformers import AutoModelForCausalLM as VisionModelClass
+                try:
+                    from transformers import AutoModelForVision2Seq as VisionModelClass
+                except ImportError:
+                    from transformers import AutoModelForCausalLM as VisionModelClass
     except ImportError as e:
         logger.error(f"Missing required ML libraries: {e}")
         return
@@ -92,8 +95,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--train_jsonl", default="data/processed/generation_train.jsonl")
     parser.add_argument("--val_jsonl", default="data/processed/generation_val.jsonl")
-    parser.add_argument("--output_dir", default="outputs/checkpoints/qwen3vl_complaint_lora")
-    parser.add_argument("--base_model_id", default="Qwen/Qwen3-VL-4B-Instruct")
+    parser.add_argument("--output_dir", default="outputs/checkpoints/qwen_complaint_lora")
+    parser.add_argument("--base_model_id", default="Qwen/Qwen2.5-VL-7B-Instruct")
     parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--dry_run", action="store_true")

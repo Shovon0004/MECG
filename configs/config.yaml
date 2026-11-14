@@ -67,7 +67,7 @@ multilingual_translation:
   cache_enabled: true
 
 vision_analysis:
-  model_id: "Qwen/Qwen3-VL-4B-Instruct"
+  model_id: "Qwen/Qwen2.5-VL-7B-Instruct"
   quantization_4bit: true
   bnb_4bit_compute_dtype: "bfloat16"
   max_new_tokens: 512
@@ -92,7 +92,7 @@ retrieval:
   prevent_self_retrieval: true
 
 generation:
-  model_id: "Qwen/Qwen3-VL-4B-Instruct"
+  model_id: "Qwen/Qwen2.5-VL-7B-Instruct"
   lora_r: 16
   lora_alpha: 32
   lora_dropout: 0.05

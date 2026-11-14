@@ -20,14 +20,14 @@ if not logger.handlers:
 
 
 class ComplaintGenerator:
-    """Generates evidence-grounded multilingual product complaints using Qwen3-VL."""
+    """Generates evidence-grounded multilingual product complaints using Qwen-VL."""
 
     def __init__(
         self,
-        base_model_id: str = "Qwen/Qwen3-VL-4B-Instruct",
+        base_model_id: str = "Qwen/Qwen2.5-VL-7B-Instruct",
         adapter_dir: Optional[Union[str, Path]] = None,
         max_new_tokens: int = 512,
-        temperature: float = 0.3,
+        temperature: float = 0.2,
         device: str = "auto",
     ):
         self.base_model_id = base_model_id
@@ -48,13 +48,13 @@ class ComplaintGenerator:
                 cfg = yaml.safe_load(f)
             g_cfg = cfg.get("generation", {})
             return cls(
-                base_model_id=g_cfg.get("model_id", "Qwen/Qwen3-VL-4B-Instruct"),
+                base_model_id=g_cfg.get("model_id", "Qwen/Qwen2.5-VL-7B-Instruct"),
                 max_new_tokens=g_cfg.get("max_seq_length", 512),
             )
         return cls()
 
     def _load_model(self):
-        """Loads Qwen3-VL and optional PEFT LoRA adapter."""
+        """Loads Qwen-VL and optional PEFT LoRA adapter."""
         if self.model is not None:
             return
 
@@ -62,12 +62,15 @@ class ComplaintGenerator:
         from transformers import AutoProcessor, BitsAndBytesConfig
 
         try:
-            from transformers import AutoModelForImageTextToText as VisionModelClass
+            from transformers import Qwen2_5_VLForConditionalGeneration as VisionModelClass
         except ImportError:
             try:
-                from transformers import AutoModelForVision2Seq as VisionModelClass
+                from transformers import AutoModelForImageTextToText as VisionModelClass
             except ImportError:
-                from transformers import AutoModelForCausalLM as VisionModelClass
+                try:
+                    from transformers import AutoModelForVision2Seq as VisionModelClass
+                except ImportError:
+                    from transformers import AutoModelForCausalLM as VisionModelClass
 
         quant_config = None
         if torch.cuda.is_available():
@@ -77,7 +80,7 @@ class ComplaintGenerator:
                 bnb_4bit_compute_dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16,
             )
 
-        logger.info(f"Loading Qwen3-VL for complaint generation: {self.base_model_id}...")
+        logger.info(f"Loading Qwen-VL for complaint generation: {self.base_model_id}...")
         self.processor = AutoProcessor.from_pretrained(self.base_model_id)
         self.model = VisionModelClass.from_pretrained(
             self.base_model_id,
