@@ -77,10 +77,10 @@ class WhisperTranscriber:
         else:
             compute_type = self.compute_type
 
-        # Map standard openai/ model IDs to official faster-whisper (Systran) CTranslate2 format
+        # Map standard openai/ model IDs to official faster-whisper CTranslate2 format
         model_name = self.model_id
-        if model_name == "openai/whisper-large-v3-turbo":
-            model_name = "Systran/faster-whisper-large-v3-turbo"
+        if model_name in ("openai/whisper-large-v3-turbo", "Systran/faster-whisper-large-v3-turbo"):
+            model_name = "deepdml/faster-whisper-large-v3-turbo-ct2"
         elif model_name.startswith("openai/whisper-"):
             model_name = model_name.replace("openai/whisper-", "")
 

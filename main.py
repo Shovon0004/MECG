@@ -70,14 +70,16 @@ def run_phase_2(config_path: str = "configs/config.yaml", pilot: bool = False, l
     print("=" * 60 + "\n")
 
 
-def run_phase_3(config_path: str = "configs/config.yaml", limit: int = 5):
+def run_phase_3(config_path: str = "configs/config.yaml", limit: int = None):
     """Phase 3: Frame Extraction, Audio Extraction & Whisper Transcription."""
-    logger.info(f"Executing Phase 3: Multimodal Preprocessing (limit={limit})...")
+    limit_str = f"limit={limit}" if limit else "all available"
+    logger.info(f"Executing Phase 3: Multimodal Preprocessing ({limit_str})...")
     frame_extractor = FrameExtractor.from_config(config_path)
     audio_extractor = AudioExtractor.from_config(config_path)
     transcriber = WhisperTranscriber.from_config(config_path)
 
-    video_files = sorted(list(Path("data/videos").glob("*.mp4")))[:limit]
+    all_videos = sorted(list(Path("data/videos").glob("*.mp4")))
+    video_files = all_videos[:limit] if limit else all_videos
     logger.info(f"Processing {len(video_files)} video files...")
 
     for v in video_files:
@@ -215,7 +217,7 @@ def main():
     phase_actions = {
         1: lambda: run_phase_1(args.config),
         2: lambda: run_phase_2(args.config, pilot=args.pilot, limit=args.limit),
-        3: lambda: run_phase_3(args.config, limit=5 if args.pilot else (args.limit or 10)),
+        3: lambda: run_phase_3(args.config, limit=5 if args.pilot else args.limit),
         4: lambda: run_phase_4(args.config),
         5: lambda: run_phase_5(args.config),
         7: lambda: run_phase_7(args.config),
