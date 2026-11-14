@@ -5,7 +5,7 @@ audio transcripts, and verified customer review text.
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger("MECG.FactChecker")
 if not logger.handlers:
@@ -94,6 +94,42 @@ class FactChecker:
         except Exception as e:
             logger.debug(f"NLI model not loaded ({e}). Using lexical overlap verification.")
             self.nli_model = False
+
+    def _evaluate_nli_entailment(self, premise: str, hypothesis: str) -> Tuple[bool, float]:
+        """
+        Runs neural cross-encoder NLI (DeBERTa-v3) to determine if premise entails hypothesis.
+        Completely vocabulary-agnostic: handles novel products, unseen defect terms, and complex paraphrasing.
+        """
+        self._init_nli()
+        if not getattr(self, "nli_model", False) or self.model is None or self.tokenizer is None:
+            return False, 0.0
+
+        try:
+            import torch
+            inputs = self.tokenizer(
+                premise,
+                hypothesis,
+                return_tensors="pt",
+                truncation=True,
+                max_length=256,
+            )
+            inputs = {k: v.to(self._device) for k, v in inputs.items()}
+
+            with torch.no_grad():
+                logits = self.model(**inputs).logits
+                probs = torch.softmax(logits, dim=-1).squeeze(0)
+
+            # Map dynamically from model config (e.g., contradiction=0, entailment=1, neutral=2)
+            id2label = {v.lower(): k for k, v in self.model.config.id2label.items()}
+            entail_idx = id2label.get("entailment", 1)
+            entail_prob = float(probs[entail_idx].item())
+
+            if entail_prob >= self.entailment_threshold:
+                return True, round(entail_prob, 3)
+        except Exception as e:
+            logger.debug(f"Neural NLI entailment evaluation error: {e}")
+
+        return False, 0.0
 
     def check_claim(
         self,
@@ -222,7 +258,45 @@ class FactChecker:
                 "confidence": 0.85,
             }
 
-        # 5. If not grounded in any evidence
+        # 5. Open-Domain Neural NLI Verification (Handles Unseen Products, Slang & Novel Defect Types)
+        # Evaluates semantic entailment with DeBERTa-v3 without relying on pre-defined keyword lists.
+        if visual_evidence:
+            for obs in visual_evidence:
+                obs_text = obs.get("observation", "")
+                if obs_text:
+                    is_entailed, conf = self._evaluate_nli_entailment(premise=obs_text, hypothesis=claim)
+                    if is_entailed:
+                        return {
+                            "claim": claim,
+                            "status": "VERIFIED_VISUAL",
+                            "evidence_source": f"Neural NLI visual entailment: '{obs_text[:80]}...'",
+                            "timestamp": obs.get("timestamp"),
+                            "confidence": conf,
+                        }
+
+        if customer_text:
+            is_entailed, conf = self._evaluate_nli_entailment(premise=customer_text, hypothesis=claim)
+            if is_entailed:
+                return {
+                    "claim": claim,
+                    "status": "VERIFIED_TEXTUAL",
+                    "evidence_source": f"Neural NLI text entailment: '{customer_text[:80]}...'",
+                    "timestamp": None,
+                    "confidence": conf,
+                }
+
+        if transcript:
+            is_entailed, conf = self._evaluate_nli_entailment(premise=transcript, hypothesis=claim)
+            if is_entailed:
+                return {
+                    "claim": claim,
+                    "status": "VERIFIED_TEXTUAL",
+                    "evidence_source": f"Neural NLI audio entailment: '{transcript[:80]}...'",
+                    "timestamp": None,
+                    "confidence": conf,
+                }
+
+        # 6. If not grounded in any evidence
         return {
             "claim": claim,
             "status": "UNSUPPORTED",
