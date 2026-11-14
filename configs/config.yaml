@@ -51,8 +51,8 @@ video_processing:
   audio_channels: 1
 
 audio_transcription:
-  model_id: "openai/whisper-large-v3-turbo"
-  fallback_model_id: "openai/whisper-small"
+  model_id: "Systran/faster-whisper-large-v3-turbo"
+  fallback_model_id: "openai/whisper-large-v3-turbo"
   device: "cuda"                     # Automatically falls back to cpu if cuda unavailable
   compute_type: "float16"            # Use int8 on CPU
   language_detection: true

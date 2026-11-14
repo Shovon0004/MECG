@@ -77,12 +77,19 @@ class WhisperTranscriber:
         else:
             compute_type = self.compute_type
 
+        # Map standard openai/ model IDs to official faster-whisper (Systran) CTranslate2 format
+        model_name = self.model_id
+        if model_name == "openai/whisper-large-v3-turbo":
+            model_name = "Systran/faster-whisper-large-v3-turbo"
+        elif model_name.startswith("openai/whisper-"):
+            model_name = model_name.replace("openai/whisper-", "")
+
         try:
             from faster_whisper import WhisperModel
-            logger.info(f"Loading Faster-Whisper model: {self.model_id} on {device} ({compute_type})")
-            self.model = WhisperModel(self.model_id, device=device, compute_type=compute_type)
-        except ImportError:
-            logger.warning("faster-whisper not installed. Attempting transformers pipeline fallback...")
+            logger.info(f"Loading Faster-Whisper model: {model_name} on {device} ({compute_type})")
+            self.model = WhisperModel(model_name, device=device, compute_type=compute_type)
+        except Exception as e:
+            logger.warning(f"Faster-whisper failed to load ({e}). Falling back to transformers pipeline...")
             from transformers import pipeline
             torch_dtype = torch.float16 if device == "cuda" else torch.float32
             self.model = pipeline(
