@@ -1,32 +1,206 @@
 """
 Evaluation metrics for MECG:
-- Original paper CR (Complaint Recall / Coverage Rate)
-- Evidence Grounding Score
+- Paper Complaint Retention (CR) Score: CR = (S_VADER^N + ES + AS) / 3
+  where:
+    - S_VADER^N: Normalized VADER sentiment score (1 - compound) / 2
+    - ES: Emotion Score (emotion fidelity of retained complaint)
+    - AS: Aspect Score (|Predicted Aspects ∩ Ground Truth Aspects| / |Ground Truth Aspects|)
+- Evidence Grounding Score (DeBERTa NLI verification)
 - Temporal Alignment Score
-- Aspect Micro-F1 & Macro-F1
-- Emotion Macro-F1
-- Generation overlap (BLEU, ROUGE-L)
+- Text generation overlap (BLEU-2, ROUGE-L)
 """
 
-from typing import Any, Dict, List, Set, Union
+import math
+from typing import Any, Dict, List, Optional, Set, Union
+
+# Valence mappings for related negative complaint emotions
+RELATED_EMOTION_GROUPS = [
+    {"anger", "frustration", "irritation", "annoyance", "rage"},
+    {"disappointment", "sadness", "regret", "dissatisfaction", "unhappy"},
+    {"disgust", "contempt", "revulsion", "distaste"},
+    {"fear", "worry", "concern", "anxiety"},
+]
+
+# Robust fallback negative lexicon if NLTK VADER is not downloaded
+FALLBACK_NEGATIVE_WORDS = {
+    "broken": -0.7, "defect": -0.8, "defective": -0.8, "damaged": -0.8,
+    "poor": -0.6, "bad": -0.6, "worst": -0.9, "terrible": -0.9,
+    "horrible": -0.9, "useless": -0.8, "fake": -0.8, "scratch": -0.5,
+    "scratched": -0.5, "fail": -0.7, "failed": -0.7, "failing": -0.7,
+    "faulty": -0.8, "cheap": -0.5, "refund": -0.6, "return": -0.4,
+    "waste": -0.8, "issue": -0.5, "problem": -0.5, "disappointed": -0.8,
+    "disappointing": -0.8, "angry": -0.8, "frustrated": -0.8, "not working": -0.8,
+    "stopped working": -0.9, "low quality": -0.7, "slow": -0.4, "delay": -0.4,
+}
+
+FALLBACK_POSITIVE_WORDS = {
+    "good": 0.5, "great": 0.7, "excellent": 0.8, "love": 0.8,
+    "perfect": 0.9, "amazing": 0.8, "works well": 0.7, "best": 0.8,
+}
 
 
-def calculate_cr(
+def calculate_vader_compound(text: str) -> float:
+    """
+    Computes VADER compound sentiment score in [-1.0, 1.0].
+    Tries NLTK VADER first; falls back to pure Python lexicon if unavailable.
+    """
+    if not text or not text.strip():
+        return 0.0
+
+    try:
+        import nltk
+        from nltk.sentiment.vader import SentimentIntensityAnalyzer
+
+        try:
+            sia = SentimentIntensityAnalyzer()
+        except LookupError:
+            nltk.download("vader_lexicon", quiet=True)
+            sia = SentimentIntensityAnalyzer()
+
+        scores = sia.polarity_scores(text)
+        return float(scores.get("compound", 0.0))
+    except Exception:
+        # Pure Python fallback lexicon
+        words = text.lower().replace(".", " ").replace(",", " ").split()
+        if not words:
+            return 0.0
+
+        score_sum = 0.0
+        for w in words:
+            if w in FALLBACK_NEGATIVE_WORDS:
+                score_sum += FALLBACK_NEGATIVE_WORDS[w]
+            elif w in FALLBACK_POSITIVE_WORDS:
+                score_sum += FALLBACK_POSITIVE_WORDS[w]
+
+        # VADER-like normalization: x / sqrt(x^2 + alpha)
+        alpha = 15.0
+        compound = score_sum / math.sqrt((score_sum * score_sum) + alpha)
+        return round(float(compound), 4)
+
+
+def normalize_vader_sentiment(compound_score: float) -> float:
+    """
+    Normalizes VADER compound score [-1.0, 1.0] to [0.0, 1.0] where
+    higher value = stronger negative complaint sentiment retained:
+    S_VADER^N = (1 - S_compound) / 2
+    """
+    s_norm = (1.0 - float(compound_score)) / 2.0
+    return round(max(0.0, min(1.0, s_norm)), 4)
+
+
+def calculate_aspect_score(
     predicted_aspects: Union[List[str], Set[str]],
     ground_truth_aspects: Union[List[str], Set[str]],
 ) -> float:
     """
-    Computes the Complaint Recall / Coverage Rate (CR) metric from the reference paper:
-    CR = |Predicted Aspects ∩ Ground Truth Aspects| / |Ground Truth Aspects|
+    Calculates Aspect Score (AS):
+    AS = |Predicted Aspects ∩ Ground Truth Aspects| / |Ground Truth Aspects|
     """
-    pred_set = {a.strip().lower() for a in predicted_aspects if a.strip()}
-    gt_set = {a.strip().lower() for a in ground_truth_aspects if a.strip()}
+    pred_set = {a.strip().lower() for a in predicted_aspects if a and a.strip()}
+    gt_set = {a.strip().lower() for a in ground_truth_aspects if a and a.strip()}
 
     if not gt_set:
         return 1.0 if not pred_set else 0.0
 
     intersection = pred_set.intersection(gt_set)
     return round(len(intersection) / len(gt_set), 4)
+
+
+def calculate_emotion_score(
+    predicted_emotion: Optional[str],
+    ground_truth_emotion: Optional[str],
+) -> float:
+    """
+    Calculates Emotion Score (ES):
+    - 1.0 for exact match
+    - 0.7 for semantically related negative complaint emotion
+    - 0.0 for mismatch / opposite valence
+    """
+    if not ground_truth_emotion:
+        return 1.0
+
+    pred_e = (predicted_emotion or "").strip().lower()
+    gt_e = (ground_truth_emotion or "").strip().lower()
+
+    if not pred_e or not gt_e:
+        return 0.0
+
+    if pred_e == gt_e:
+        return 1.0
+
+    for group in RELATED_EMOTION_GROUPS:
+        if pred_e in group and gt_e in group:
+            return 0.7
+
+    return 0.0
+
+
+def calculate_composite_cr(
+    text: str,
+    target_aspects: Union[List[str], Set[str]],
+    predicted_aspects: Union[List[str], Set[str]],
+    target_emotion: Optional[str] = None,
+    predicted_emotion: Optional[str] = None,
+) -> Dict[str, float]:
+    """
+    Calculates the exact Complaint Retention (CR) composite score from the paper:
+    CR = (S_VADER^N + ES + AS) / 3
+
+    Returns dictionary with composite CR and all individual component scores:
+    {
+        "cr_score": float,
+        "s_vader_norm": float,
+        "emotion_score": float,
+        "aspect_score": float,
+        "raw_vader_compound": float,
+    }
+    """
+    # 1. Normalized VADER sentiment
+    raw_compound = calculate_vader_compound(text)
+    s_vader_norm = normalize_vader_sentiment(raw_compound)
+
+    # 2. Emotion Score
+    es = calculate_emotion_score(predicted_emotion, target_emotion)
+
+    # 3. Aspect Score
+    as_score = calculate_aspect_score(predicted_aspects, target_aspects)
+
+    # Composite CR
+    cr = round((s_vader_norm + es + as_score) / 3.0, 4)
+
+    return {
+        "cr_score": cr,
+        "s_vader_norm": s_vader_norm,
+        "emotion_score": es,
+        "aspect_score": as_score,
+        "raw_vader_compound": round(raw_compound, 4),
+    }
+
+
+def calculate_cr(
+    predicted_aspects: Union[List[str], Set[str]],
+    ground_truth_aspects: Union[List[str], Set[str]],
+    text: Optional[str] = None,
+    predicted_emotion: Optional[str] = None,
+    ground_truth_emotion: Optional[str] = None,
+) -> float:
+    """
+    Calculates Complaint Retention (CR).
+    If text and emotion are provided, computes the full 3-term composite CR:
+        CR = (S_VADER^N + ES + AS) / 3
+    Otherwise, computes aspect coverage rate (AS) for backward compatibility.
+    """
+    if text is not None and (ground_truth_emotion is not None or predicted_emotion is not None):
+        comp = calculate_composite_cr(
+            text=text,
+            target_aspects=ground_truth_aspects,
+            predicted_aspects=predicted_aspects,
+            target_emotion=ground_truth_emotion,
+            predicted_emotion=predicted_emotion,
+        )
+        return comp["cr_score"]
+
+    return calculate_aspect_score(predicted_aspects, ground_truth_aspects)
 
 
 def calculate_evidence_grounding_score(
@@ -66,7 +240,7 @@ def calculate_text_overlap(
     reference: str,
     hypothesis: str,
 ) -> Dict[str, float]:
-    """Calculates pure-Python BLEU and ROUGE-L approximation."""
+    """Calculates pure-Python BLEU-2 and ROUGE-L approximation."""
     ref_words = reference.lower().split()
     hyp_words = hypothesis.lower().split()
 
