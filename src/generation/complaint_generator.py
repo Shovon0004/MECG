@@ -59,7 +59,15 @@ class ComplaintGenerator:
             return
 
         import torch
-        from transformers import AutoModelForVision2Seq, AutoProcessor, BitsAndBytesConfig
+        from transformers import AutoProcessor, BitsAndBytesConfig
+
+        try:
+            from transformers import AutoModelForImageTextToText as VisionModelClass
+        except ImportError:
+            try:
+                from transformers import AutoModelForVision2Seq as VisionModelClass
+            except ImportError:
+                from transformers import AutoModelForCausalLM as VisionModelClass
 
         quant_config = None
         if torch.cuda.is_available():
@@ -71,7 +79,7 @@ class ComplaintGenerator:
 
         logger.info(f"Loading Qwen3-VL for complaint generation: {self.base_model_id}...")
         self.processor = AutoProcessor.from_pretrained(self.base_model_id)
-        self.model = AutoModelForVision2Seq.from_pretrained(
+        self.model = VisionModelClass.from_pretrained(
             self.base_model_id,
             quantization_config=quant_config,
             device_map="auto" if torch.cuda.is_available() else None,

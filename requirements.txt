@@ -2,8 +2,8 @@
 # Python Requirements Specification
 
 # Core Scientific & Data Processing
-numpy>=1.24.0,<2.0.0
-pandas>=2.0.0,<3.0.0
+numpy>=1.24.0
+pandas>=2.0.0
 scipy>=1.10.0
 pyyaml>=6.0
 tqdm>=4.65.0
@@ -12,7 +12,6 @@ beautifulsoup4>=4.12.0
 scikit-learn>=1.3.0
 
 # Multimodal & Vision
-opencv-python-headless>=4.8.0
 pillow>=10.0.0
 imageio>=2.31.0
 imageio-ffmpeg>=0.4.9
@@ -22,28 +21,18 @@ faster-whisper>=1.0.0
 soundfile>=0.12.1
 
 # Deep Learning & Transformers (Hugging Face)
-torch>=2.1.0
-torchvision>=0.16.0
-torchaudio>=2.1.0
-transformers>=4.48.0
-accelerate>=0.33.0
-bitsandbytes>=0.43.0
-peft>=0.12.0
+transformers>=4.45.0
+accelerate>=0.30.0
+bitsandbytes>=0.42.0
+peft>=0.10.0
 sentencepiece>=0.2.0
-protobuf>=4.25.0
 
 # Multilingual Translation & Tokenization
 sacrebleu>=2.4.0
 evaluate>=0.4.0
-nltk>=3.8.1
 
 # Vector Retrieval & Indexing
 faiss-cpu>=1.7.4
 
 # Metrics & NLP Evaluation
 rouge-score>=0.1.2
-bert-score>=0.3.13
-
-# Testing & Linting
-pytest>=7.4.0
-flake8>=6.0.0

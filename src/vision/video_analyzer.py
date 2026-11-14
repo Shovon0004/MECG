@@ -65,7 +65,15 @@ class VideoAnalyzer:
             return
 
         import torch
-        from transformers import AutoProcessor, AutoModelForVision2Seq
+        from transformers import AutoProcessor
+
+        try:
+            from transformers import AutoModelForImageTextToText as VisionModelClass
+        except ImportError:
+            try:
+                from transformers import AutoModelForVision2Seq as VisionModelClass
+            except ImportError:
+                from transformers import AutoModelForCausalLM as VisionModelClass
 
         logger.info(f"Loading Qwen3-VL model: {self.model_id} (4-bit NF4={self.quantization_4bit})...")
 
@@ -84,7 +92,7 @@ class VideoAnalyzer:
         device_map = "auto" if torch.cuda.is_available() else None
         torch_dtype = torch.bfloat16 if (torch.cuda.is_available() and torch.cuda.is_bf16_supported()) else torch.float16
 
-        self.model = AutoModelForVision2Seq.from_pretrained(
+        self.model = VisionModelClass.from_pretrained(
             self.model_id,
             quantization_config=quant_config,
             torch_dtype=torch_dtype if not quant_config else None,

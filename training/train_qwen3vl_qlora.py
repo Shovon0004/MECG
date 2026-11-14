@@ -34,12 +34,18 @@ def train_qlora(
         import torch
         from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
         from transformers import (
-            AutoModelForVision2Seq,
             AutoProcessor,
             BitsAndBytesConfig,
             TrainingArguments,
             Trainer,
         )
+        try:
+            from transformers import AutoModelForImageTextToText as VisionModelClass
+        except ImportError:
+            try:
+                from transformers import AutoModelForVision2Seq as VisionModelClass
+            except ImportError:
+                from transformers import AutoModelForCausalLM as VisionModelClass
     except ImportError as e:
         logger.error(f"Missing required ML libraries: {e}")
         return
@@ -54,7 +60,7 @@ def train_qlora(
     )
 
     processor = AutoProcessor.from_pretrained(base_model_id)
-    model = AutoModelForVision2Seq.from_pretrained(
+    model = VisionModelClass.from_pretrained(
         base_model_id,
         quantization_config=bnb_config,
         device_map="auto" if torch.cuda.is_available() else None,
