@@ -191,9 +191,12 @@ class WhisperTranscriber:
                 except Exception:
                     audio_input = str(audio_path)
 
-                segments, info = self.model.transcribe(audio_input, beam_size=5)
-                result["detected_language"] = info.language
-                result["language_probability"] = round(info.language_probability, 3)
+                segments, info = self.model.transcribe(
+                    audio_input,
+                    beam_size=5,
+                    vad_filter=True,
+                    vad_parameters=dict(min_silence_duration_ms=500),
+                )
 
                 seg_list = []
                 full_text_parts = []
@@ -206,8 +209,26 @@ class WhisperTranscriber:
                             "end": round(s.end, 2),
                             "text": seg_text,
                         })
-                result["transcript"] = " ".join(full_text_parts)
+                full_transcript = " ".join(full_text_parts)
+                result["transcript"] = full_transcript
                 result["segments"] = seg_list
+
+                # Robust Language Detection with Confidence Gating:
+                # If audio is silent/empty or confidence is low (< 0.65), default to English
+                detected_lang = getattr(info, "language", "en")
+                prob = float(getattr(info, "language_probability", 0.0) or 0.0)
+
+                if not full_transcript or len(full_transcript) < 3 or prob < 0.65:
+                    if prob < 0.65 and full_transcript:
+                        logger.info(
+                            f"Low audio language confidence ({prob:.2f} for '{detected_lang}'). "
+                            "Defaulting to 'en'."
+                        )
+                    detected_lang = "en"
+                    prob = 0.95 if not full_transcript else prob
+
+                result["detected_language"] = detected_lang
+                result["language_probability"] = round(prob, 3)
             elif callable(self.model):
                 out = self.model(str(audio_path))
                 result["transcript"] = out.get("text", "").strip()

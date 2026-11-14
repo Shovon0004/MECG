@@ -42,9 +42,20 @@ DEFAULT_NLLB_TO_ISO: Dict[str, str] = {v: k for k, v in DEFAULT_ISO_TO_NLLB.item
 class LanguageDetector:
     """Detects spoken/written language and maps across Whisper, ISO, and NLLB codes."""
 
-    def __init__(self, languages_config_path: Union[str, Path] = "configs/languages.yaml"):
+    def __init__(
+        self,
+        languages_config_path: Union[str, Path] = "configs/languages.yaml",
+        neural_model_id: str = "papluca/xlm-roberta-base-language-detection",
+        use_neural: bool = True,
+        device: str = "auto",
+    ):
         self.config_path = Path(languages_config_path)
         self.lang_map = dict(DEFAULT_ISO_TO_NLLB)
+        self.neural_model_id = neural_model_id
+        self.use_neural = use_neural
+        self.device = device
+        self._neural_pipeline = None
+        self._neural_failed = False
         self._load_config()
 
     def _load_config(self):
@@ -59,6 +70,29 @@ class LanguageDetector:
                         self.lang_map[iso] = nllb
             except Exception as e:
                 logger.warning(f"Could not load languages config: {e}. Using defaults.")
+
+    def _init_neural_pipeline(self):
+        """Loads neural XLM-RoBERTa language classifier on demand."""
+        if not self.use_neural or self._neural_pipeline is not None or self._neural_failed:
+            return
+
+        try:
+            import torch
+            from transformers import pipeline
+
+            dev = 0 if (torch.cuda.is_available() and self.device == "auto") else -1
+            self._neural_pipeline = pipeline(
+                "text-classification",
+                model=self.neural_model_id,
+                device=dev,
+                top_k=1,
+                truncation=True,
+                max_length=128,
+            )
+            logger.info(f"Loaded neural language detector: {self.neural_model_id}")
+        except Exception as e:
+            logger.debug(f"Neural language detector unavailable ({e}). Using Unicode script analyzer.")
+            self._neural_failed = True
 
     def detect_language(self, text: str) -> Dict[str, Any]:
         """
@@ -98,7 +132,39 @@ class LanguageDetector:
             "en": (latin_chars, "Latin"),
         }
 
-        # Find dominant script
+        # If a non-Latin script has unambiguous majority, use script immediately
+        non_latin_chars = bengali_chars + devanagari_chars + tamil_chars + telugu_chars + arabic_chars
+        if non_latin_chars > latin_chars:
+            best_iso, (best_count, best_script) = max(char_counts.items(), key=lambda item: item[1][0])
+            total_identifiable = sum(v[0] for v in char_counts.values())
+            conf = round(best_count / total_identifiable, 3) if total_identifiable > 0 else 0.5
+            return {
+                "iso_code": best_iso,
+                "nllb_code": self.lang_map.get(best_iso, "eng_Latn"),
+                "script": best_script,
+                "confidence": conf,
+            }
+
+        # Otherwise (Latin text or mixed), query neural XLM-RoBERTa model if available
+        self._init_neural_pipeline()
+        if self._neural_pipeline is not None:
+            try:
+                preds = self._neural_pipeline(cleaned[:256])
+                if preds and isinstance(preds, list):
+                    top_pred = preds[0][0] if isinstance(preds[0], list) else preds[0]
+                    iso = top_pred.get("label", "en").lower()
+                    score = round(float(top_pred.get("score", 0.9)), 3)
+                    if iso in self.lang_map or iso in ("fr", "es", "de", "it", "pt", "ru", "zh", "ja"):
+                        return {
+                            "iso_code": iso,
+                            "nllb_code": self.lang_map.get(iso, "eng_Latn"),
+                            "script": "Latin",
+                            "confidence": score,
+                        }
+            except Exception as e_neural:
+                logger.debug(f"Neural language detection error: {e_neural}")
+
+        # Fallback to dominant script
         best_iso, (best_count, best_script) = max(char_counts.items(), key=lambda item: item[1][0])
         total_identifiable = sum(v[0] for v in char_counts.values())
 
