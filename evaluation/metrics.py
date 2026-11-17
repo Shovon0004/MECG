@@ -14,12 +14,13 @@ import math
 import re
 from typing import Any, Dict, List, Optional, Set, Union
 
-# Valence mappings for related negative complaint emotions
+# Valence mappings for related negative complaint emotions (aligned with Com-VID dataset taxonomy)
 RELATED_EMOTION_GROUPS = [
-    {"anger", "frustration", "irritation", "annoyance", "rage"},
+    {"anger", "frustration", "irritation", "annoyance", "rage", "blame"},
     {"disappointment", "sadness", "regret", "dissatisfaction", "unhappy"},
     {"disgust", "contempt", "revulsion", "distaste"},
     {"fear", "worry", "concern", "anxiety"},
+    {"blame", "frustration", "dissatisfaction", "disappointment"},  # Com-VID complaint taxonomy
 ]
 
 # Robust fallback negative complaint lexicon

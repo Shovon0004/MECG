@@ -155,9 +155,29 @@ class AspectClassifier:
             logger.warning(f"Using rule-based aspect extraction fallback: {e}")
             detected = []
             text_lower = text.lower()
+            
+            # Direct taxonomy word matching
             for asp in self.taxonomy:
                 if asp.lower() in text_lower:
                     detected.append({"aspect": asp, "confidence": 0.85})
+            
+            # Domain-semantic expansion mappings for Com-VID aspects
+            semantic_triggers = {
+                "Usability": ["use", "using", "usable", "lock", "locking", "cap", "lid", "leak", "leaks", "leaking", "spill", "spills", "pour", "handle", "open", "close", "fit", "fitting", "tight"],
+                "Finishing": ["finish", "finishing", "smell", "scent", "chemical", "plastic", "pungent", "glue", "rough", "edge", "stitching", "seam", "threads", "paint", "peeling"],
+                "Colour": ["color", "colour", "shade", "fade", "faded", "discolor"],
+                "Design": ["design", "look", "looks", "shape", "style", "pattern", "sole", "image", "parallel"],
+                "Functionality": ["function", "working", "works", "turn on", "power", "charge", "battery", "button", "connect", "audio"],
+                "Quality": ["quality", "cheap", "bad", "poor", "worst", "defective", "faulty", "damaged", "fake", "recommend"],
+                "Durability": ["durable", "durability", "tear", "torn", "broken", "cracked", "snapped", "fragile"],
+            }
+            
+            already_detected = {d["aspect"] for d in detected}
+            for asp, triggers in semantic_triggers.items():
+                if asp in self.taxonomy and asp not in already_detected:
+                    if any(t in text_lower for t in triggers):
+                        detected.append({"aspect": asp, "confidence": 0.80})
+            
             if not detected:
                 detected.append({"aspect": "Quality", "confidence": 0.5})
             return detected

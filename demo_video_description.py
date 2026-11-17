@@ -43,7 +43,8 @@ def process_single_video(
 
     customer_text = row_info.get("customer_text") or "Not recommended. Product is defective."
     domain = row_info.get("domain") or "General"
-    gt_aspects = [a.strip() for a in row_info.get("aspects", "").split(",") if a.strip()]
+    raw_aspects = row_info.get("aspects", "")
+    gt_aspects = [a.strip() for a in raw_aspects.split(",") if a.strip()] if raw_aspects else ["Quality"]
     gt_emotion = row_info.get("emotion") or "dissatisfaction"
     gt_complaint = row_info.get("ground_truth_complaint") or ""
 
