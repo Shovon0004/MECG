@@ -14,6 +14,11 @@ try:
 except ImportError:
     yaml = None
 
+try:
+    import torch
+except ImportError:
+    torch = None
+
 logger = logging.getLogger("MECG.ComplaintGenerator")
 if not logger.handlers:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -24,7 +29,7 @@ class ComplaintGenerator:
 
     def __init__(
         self,
-        base_model_id: str = "Qwen/Qwen2.5-VL-7B-Instruct",
+        base_model_id: str = "Qwen/Qwen3-VL-4B-Instruct",
         adapter_dir: Optional[Union[str, Path]] = None,
         max_new_tokens: int = 512,
         temperature: float = 0.2,
@@ -48,7 +53,7 @@ class ComplaintGenerator:
                 cfg = yaml.safe_load(f)
             g_cfg = cfg.get("generation", {})
             return cls(
-                base_model_id=g_cfg.get("model_id", "Qwen/Qwen2.5-VL-7B-Instruct"),
+                base_model_id=g_cfg.get("model_id", "Qwen/Qwen3-VL-4B-Instruct"),
                 max_new_tokens=g_cfg.get("max_seq_length", 512),
             )
         return cls()
@@ -62,10 +67,10 @@ class ComplaintGenerator:
         from transformers import AutoProcessor, BitsAndBytesConfig
 
         try:
-            from transformers import Qwen2_5_VLForConditionalGeneration as VisionModelClass
+            from transformers import AutoModelForImageTextToText as VisionModelClass
         except ImportError:
             try:
-                from transformers import AutoModelForImageTextToText as VisionModelClass
+                from transformers import Qwen2_5_VLForConditionalGeneration as VisionModelClass
             except ImportError:
                 try:
                     from transformers import AutoModelForVision2Seq as VisionModelClass

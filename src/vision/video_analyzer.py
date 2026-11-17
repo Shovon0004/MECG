@@ -15,6 +15,11 @@ try:
 except ImportError:
     yaml = None
 
+try:
+    import torch
+except ImportError:
+    torch = None
+
 logger = logging.getLogger("MECG.VideoAnalyzer")
 if not logger.handlers:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -28,7 +33,7 @@ class VideoAnalyzer:
 
     def __init__(
         self,
-        model_id: str = "Qwen/Qwen2.5-VL-7B-Instruct",
+        model_id: str = "Qwen/Qwen3-VL-4B-Instruct",
         quantization_4bit: bool = True,
         max_new_tokens: int = 512,
         temperature: float = 0.2,
@@ -52,7 +57,7 @@ class VideoAnalyzer:
                 cfg = yaml.safe_load(f)
             v_cfg = cfg.get("vision_analysis", {})
             return cls(
-                model_id=v_cfg.get("model_id", "Qwen/Qwen2.5-VL-7B-Instruct"),
+                model_id=v_cfg.get("model_id", "Qwen/Qwen3-VL-4B-Instruct"),
                 quantization_4bit=v_cfg.get("quantization_4bit", True),
                 max_new_tokens=v_cfg.get("max_new_tokens", 512),
                 temperature=v_cfg.get("temperature", 0.2),
@@ -68,10 +73,10 @@ class VideoAnalyzer:
         from transformers import AutoProcessor
 
         try:
-            from transformers import Qwen2_5_VLForConditionalGeneration as VisionModelClass
+            from transformers import AutoModelForImageTextToText as VisionModelClass
         except ImportError:
             try:
-                from transformers import AutoModelForImageTextToText as VisionModelClass
+                from transformers import Qwen2_5_VLForConditionalGeneration as VisionModelClass
             except ImportError:
                 try:
                     from transformers import AutoModelForVision2Seq as VisionModelClass
