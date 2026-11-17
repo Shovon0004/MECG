@@ -256,6 +256,8 @@ class VideoDownloader:
         if effective_limit is not None:
             records = records[:effective_limit]
             logger.info(f"Running in limited / pilot mode: processing first {len(records)} records")
+        else:
+            logger.info(f"Processing all {len(records)} records in dataset...")
 
         # Track processed URLs to avoid re-querying identical URLs in same batch
         seen_urls: Dict[str, Dict[str, Any]] = {}

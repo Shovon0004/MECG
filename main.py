@@ -57,8 +57,7 @@ def run_phase_2(config_path: str = "configs/config.yaml", pilot: bool = False, l
     """Phase 2: Video Downloading, Validation & Deduplication."""
     logger.info(f"Executing Phase 2: Video Downloading (pilot={pilot})...")
     downloader = VideoDownloader.from_config(config_path)
-    if pilot:
-        downloader.pilot_mode = True
+    downloader.pilot_mode = pilot
     effective_limit = 5 if pilot else limit
     report = downloader.download_dataset(limit=effective_limit)
     report_path = downloader.save_report()

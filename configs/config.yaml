@@ -38,7 +38,7 @@ splits:
   random_seed: 42
 
 video_processing:
-  pilot_mode: true
+  pilot_mode: false
   pilot_size: 5
   sample_frames: 8                   # Configurable initial sample: 8 frames
   frame_size: [448, 448]
