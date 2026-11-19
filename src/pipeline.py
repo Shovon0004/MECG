@@ -132,7 +132,7 @@ class MECGPipeline:
 
         # Step 8: Predict complaint aspects (Multimodal Fusion: Text + Audio + Video)
         combined_text = f"{customer_text_en} {transcript_en}".strip()
-        aspect_preds = self.aspect_classifier.predict(combined_text) if combined_text else []
+        aspect_preds = self.aspect_classifier.predict(combined_text, domain=product_domain) if combined_text else []
         text_aspects = [p["aspect"] for p in aspect_preds]
         visual_aspects = visual_analysis.get("possible_aspects", [])
 
