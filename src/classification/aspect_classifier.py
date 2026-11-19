@@ -54,7 +54,7 @@ class AspectClassifier:
         taxonomy: Optional[List[str]] = None,
         checkpoint_dir: Union[str, Path] = "outputs/checkpoints/aspect_classifier",
         device: str = "auto",
-        threshold: float = 0.5,
+        threshold: float = 0.35,
     ):
         self.model_id = model_id
         self.taxonomy = sorted(list(set(taxonomy or DEFAULT_ASPECT_TAXONOMY)))

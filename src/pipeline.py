@@ -130,10 +130,20 @@ class MECGPipeline:
         )
         visual_evidence = visual_analysis.get("visible_observations", [])
 
-        # Step 8: Predict complaint aspects
+        # Step 8: Predict complaint aspects (Multimodal Fusion: Text + Audio + Video)
         combined_text = f"{customer_text_en} {transcript_en}".strip()
         aspect_preds = self.aspect_classifier.predict(combined_text) if combined_text else []
-        aspect_names = [p["aspect"] for p in aspect_preds]
+        text_aspects = [p["aspect"] for p in aspect_preds]
+        visual_aspects = visual_analysis.get("possible_aspects", [])
+
+        # Fuse unique aspects preserving order (text + visual evidence)
+        seen_aspects = set()
+        aspect_names = []
+        for asp in text_aspects + visual_aspects:
+            clean_asp = asp.strip()
+            if clean_asp and clean_asp.lower() not in seen_aspects:
+                seen_aspects.add(clean_asp.lower())
+                aspect_names.append(clean_asp)
 
         # Step 9: Predict customer emotion
         emotion_preds = self.emotion_classifier.predict(customer_text_en) if customer_text_en else {"predicted_emotion": "dissatisfaction"}
